@@ -81,6 +81,8 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
+      - /mnt/storage/media/Movies:/media/movies
+      - /mnt/storage/media/TV Shows:/media/tv
       - /mnt/storage/media:/media
       - /mnt/storage/qbittorrent:/downloads
       - ./bazarr_config:/config
