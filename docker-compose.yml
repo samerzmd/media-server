@@ -15,7 +15,7 @@ services:
       - TZ=Asia/Riyadh
       - WEBUI_PORT=8080
     volumes:
-      - /mnt/storage:/downloads
+      - /mnt/storage/qbittorrent:/downloads
       - ./qbittorrent_config:/config
     networks:
       - media_network
@@ -31,7 +31,8 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
-      - /mnt/storage:/downloads
+      - /mnt/storage/media/TV Shows:/media/tv
+      - /mnt/storage/qbittorrent:/downloads
       - ./sonarr_config:/config
     networks:
       - media_network
@@ -47,7 +48,8 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
-      - /mnt/storage:/downloads
+      - /mnt/storage/media/Movies:/media/movies
+      - /mnt/storage/qbittorrent:/downloads
       - ./radarr_config:/config
     networks:
       - media_network
@@ -63,7 +65,7 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
-      - /mnt/storage:/downloads
+      - /mnt/storage/qbittorrent:/downloads  # Adding it back for consistency
       - ./prowlarr_config:/config
     networks:
       - media_network
@@ -79,7 +81,8 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
-      - /mnt/storage:/downloads
+      - /mnt/storage/media:/media
+      - /mnt/storage/qbittorrent:/downloads
       - ./bazarr_config:/config
     networks:
       - media_network
@@ -96,7 +99,7 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
-      - /mnt/storage:/media
+      - /mnt/storage/media:/media
       - ./jellyfin_config:/config
       - ./jellyfin_cache:/cache
     networks:
