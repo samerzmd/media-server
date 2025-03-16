@@ -108,7 +108,7 @@ services:
       - media_network
 
   searcharr:
-    image: ghcr.io/toddrob99/searcharr:latest
+    image: toddrob/searcharr:latest
     container_name: searcharr
     restart: unless-stopped
     env_file:
