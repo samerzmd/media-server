@@ -1,2 +1,12 @@
 # Ignore environment secrets
 .env
+# Ignore all configuration directories
+addarr_config/
+bazarr_config/
+jellyfin_config/
+jellyfin_cache/
+jellyfin_data/
+prowlarr_config/
+qbittorrent_config/
+radarr_config/
+sonarr_config/
