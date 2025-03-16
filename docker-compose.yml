@@ -106,7 +106,18 @@ services:
       - ./jellyfin_cache:/cache
     networks:
       - media_network
-
+  
+  addarr:
+    image: waterboy1602/addarr:latest
+    container_name: addarr
+    volumes:
+      - ./addarr_config/config.yaml:/app/config.yaml:ro
+      - ./addarr_config/chatid.txt:/app/chatid.txt:rw
+      - ./addarr_config/admin.txt:/app/admin.txt:ro
+      - ./addarr_config/logs:/app/logs:rw
+    restart: unless-stopped
+    networks:
+      - media_network
 
 networks:
   media_network:
