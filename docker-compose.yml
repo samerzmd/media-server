@@ -124,7 +124,6 @@ services:
       - PROWLARR_API_KEY=${PROWLARR_API_KEY}
       - PROWLARR_URL=http://prowlarr:9696/api/v1
     restart: unless-stopped
-    network_mode: host
     networks:
       - media_network
 
