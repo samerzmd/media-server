@@ -107,6 +107,25 @@ services:
     networks:
       - media_network
 
+  searcharr:
+    image: ghcr.io/toddrob99/searcharr:latest
+    container_name: searcharr
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - RADARR_URL=http://radarr:7878/api/v3
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - SONARR_URL=http://sonarr:8989/api/v3
+      - PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - PROWLARR_URL=http://prowlarr:9696/api/v1
+    volumes:
+      - ./searcharr:/config
+    networks:
+      - media_network
+
 networks:
   media_network:
     driver: bridge
