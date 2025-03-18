@@ -63,7 +63,7 @@ services:
       - PGID=1000
       - TZ=Asia/Riyadh
     volumes:
-      - /mnt/storage/qbittorrent:/downloads  # Adding it back for consistency
+      - /mnt/storage/qbittorrent:/downloads
       - ./prowlarr_config:/config
     networks:
       - media_network
@@ -102,6 +102,24 @@ services:
       - /mnt/storage/media:/media
       - ./jellyfin_config:/config
       - ./jellyfin_cache:/cache
+    networks:
+      - media_network
+
+  nginx_proxy_manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx_proxy_manager
+    restart: unless-stopped
+    ports:
+      - "80:80"    # HTTP
+      - "81:81"    # Admin UI
+      - "443:443"  # HTTPS
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Riyadh
+    volumes:
+      - ./nginx_data:/data
+      - ./nginx_letsencrypt:/etc/letsencrypt
     networks:
       - media_network
 
