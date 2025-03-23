@@ -123,6 +123,16 @@ services:
     networks:
       - media_network
 
+  commandarr:
+    image: samerzmd/commandarr:latest
+    container_name: commandarr
+    environment:
+      TELEGRAM_TOKEN: $BOT_TOKEN
+      SONARR_URL: sonarr
+      SONARR_API_KEY: $SONARR_API_KEY
+      RADARR_URL: radarr
+      RADARR_API_KEY: $RADARR_API_KEY
+
 networks:
   media_network:
     driver: bridge
