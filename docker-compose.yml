@@ -123,6 +123,23 @@ services:
     networks:
       - media_network
 
+  readarr:
+    image: ghcr.io/linuxserver/readarr:develop
+    container_name: readarr
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Riyadh
+    volumes:
+      - /mnt/storage/media/Books:/media/books
+      - /mnt/storage/qbittorrent:/downloads
+      - ./readarr_config:/config
+    networks:
+      - media_network
+
   commandarr:
     image: samerzmd/commandarr:latest
     container_name: commandarr
