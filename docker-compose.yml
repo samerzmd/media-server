@@ -139,6 +139,23 @@ services:
       - ./readarr_config:/config
     networks:
       - media_network
+  
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Riyadh
+    volumes:
+      - /mnt/storage/media/Books:/books
+      - ./calibre-web_config:/config
+    networks:
+      - media_network
+
 
   commandarr:
     image: samerzmd/commandarr:latest
