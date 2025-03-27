@@ -10,3 +10,5 @@ prowlarr_config/
 qbittorrent_config/
 radarr_config/
 sonarr_config/
+filebrowser_config/
+filebrowser_database/

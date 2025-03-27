@@ -167,6 +167,23 @@ services:
       RADARR_URL: radarr
       RADARR_API_KEY: $RADARR_API_KEY
 
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Riyadh
+    volumes:
+      - /mnt/storage:/srv
+      - ./filebrowser_config:/config
+      - ./filebrowser_database:/database
+    networks:
+      - media_network
+
 networks:
   media_network:
     driver: bridge
