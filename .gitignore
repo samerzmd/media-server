@@ -12,3 +12,7 @@ radarr_config/
 sonarr_config/
 filebrowser_config/
 filebrowser_database/
+calibre-web_config/
+nginx_data/
+nginx_letsencrypt/
+readarr_config/
