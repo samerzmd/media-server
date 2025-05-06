@@ -183,6 +183,71 @@ services:
       - ./filebrowser_database:/database
     networks:
       - media_network
+  
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich_server
+    restart: unless-stopped
+    depends_on:
+      - immich-redis
+      - immich-postgres
+    environment:
+      - DB_URL=postgresql://immich:immichpassword@immich-postgres:5432/immich
+      - REDIS_HOST=immich-redis
+      - IMMICH_MACHINE_LEARNING_URL=http://immich-machine-learning:3003
+      - NODE_ENV=production
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Riyadh
+    volumes:
+      - /mnt/storage/immich/library:/usr/src/app/upload
+    networks:
+      - media_network
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich_ml
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Riyadh
+    networks:
+      - media_network
+
+  immich-redis:
+    image: redis:6
+    container_name: immich_redis
+    restart: unless-stopped
+    networks:
+      - media_network
+
+  immich-postgres:
+    image: postgres:14
+    container_name: immich_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=immich
+      - POSTGRES_PASSWORD=immichpassword
+      - POSTGRES_DB=immich
+      - TZ=Asia/Riyadh
+    volumes:
+      - ./immich_postgres:/var/lib/postgresql/data
+    networks:
+      - media_network
+
+  immich-web:
+    image: ghcr.io/immich-app/immich-web:release
+    container_name: immich_web
+    restart: unless-stopped
+    depends_on:
+      - immich-server
+    ports:
+      - "2283:3000"
+    environment:
+      - IMMICH_SERVER_URL=http://immich-server:3001
+    networks:
+      - media_network
 
 networks:
   media_network:
