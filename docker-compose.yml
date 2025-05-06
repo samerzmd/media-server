@@ -192,7 +192,7 @@ services:
       - immich-redis
       - immich-postgres
     environment:
-      - DB_URL=postgresql://immich:immichpassword@immich-postgres:5432/immich
+      - DB_URL=postgresql://samerzmd:samer9lifes@immich-postgres:5432/immich
       - REDIS_HOST=immich-redis
       - IMMICH_MACHINE_LEARNING_URL=http://immich-machine-learning:3003
       - NODE_ENV=production
@@ -227,8 +227,8 @@ services:
     container_name: immich_postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=immich
-      - POSTGRES_PASSWORD=immichpassword
+      - POSTGRES_USER=samerzmd
+      - POSTGRES_PASSWORD=samer9lifes
       - POSTGRES_DB=immich
       - TZ=Asia/Riyadh
     volumes:
