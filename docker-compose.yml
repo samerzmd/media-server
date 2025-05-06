@@ -186,7 +186,7 @@ services:
   
   immich-server:
     container_name: immich_server
-    image: ghcr.io/immich-app/immich-server:release:-release
+    image: ghcr.io/immich-app/immich-server:release-release
     volumes:
       - /mnt/storage/immich/library:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
@@ -203,7 +203,7 @@ services:
 
   immich-machine-learning:
     container_name: immich_machine_learning
-    image: ghcr.io/immich-app/immich-machine-learning:release:-release
+    image: ghcr.io/immich-app/immich-machine-learning:release-release
     volumes:
       - model-cache:/cache
     env_file:
