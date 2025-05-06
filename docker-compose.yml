@@ -185,70 +185,69 @@ services:
       - media_network
   
   immich-server:
-    image: ghcr.io/immich-app/immich-server:release
     container_name: immich_server
-    restart: unless-stopped
-    depends_on:
-      - immich-redis
-      - immich-postgres
-    environment:
-      - DB_URL=postgresql://samerzmd:samer9lifes@immich-postgres:5432/immich
-      - REDIS_HOST=immich-redis
-      - IMMICH_MACHINE_LEARNING_URL=http://immich-machine-learning:3003
-      - NODE_ENV=production
-      - PUID=1000
-      - PGID=1000
-      - TZ=Asia/Riyadh
+    image: ghcr.io/immich-app/immich-server:release:-release
     volumes:
       - /mnt/storage/immich/library:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - '2283:2283'
+    depends_on:
+      - immich_redis
+      - immich_postgres
+    restart: always
+    healthcheck:
+      disable: false
     networks:
       - media_network
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:release
-    container_name: immich_ml
-    restart: unless-stopped
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Asia/Riyadh
-    networks:
-      - media_network
-
-  immich-redis:
-    image: redis:6
-    container_name: immich_redis
-    restart: unless-stopped
-    networks:
-      - media_network
-
-  immich-postgres:
-    image: postgres:14
-    container_name: immich_postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=samerzmd
-      - POSTGRES_PASSWORD=samer9lifes
-      - POSTGRES_DB=immich
-      - TZ=Asia/Riyadh
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:release:-release
     volumes:
-      - ./immich_postgres:/var/lib/postgresql/data
+      - model-cache:/cache
+    env_file:
+      - .env
+    restart: always
+    healthcheck:
+      disable: false
     networks:
       - media_network
 
-  immich-web:
-    image: ghcr.io/immich-app/immich-web:release
-    container_name: immich_web
-    restart: unless-stopped
-    depends_on:
-      - immich-server
-    ports:
-      - "2283:3000"
+  immich_redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:8-bookworm@sha256:42cba146593a5ea9a622002c1b7cba5da7be248650cbb64ecb9c6c33d29794b1
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: always
+    networks:
+      - media_network
+
+  immich_postgres:
+    container_name: immich_postgres
+    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:739cdd626151ff1f796dc95a6591b55a714f341c737e27f045019ceabf8e8c52
     environment:
-      - IMMICH_SERVER_URL=http://immich-server:3001
+      POSTGRES_PASSWORD: samer9lifes
+      POSTGRES_USER: samerzmd
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - /mnt/storage/immich_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: >-
+        pg_isready --dbname="immich" --username="samerzmd" || exit 1; Chksum="$$(psql --dbname="immich" --username="samerzmd" --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
+      interval: 5m
+      start_interval: 30s
+      start_period: 5m
+    command: >-
+      postgres -c shared_preload_libraries=vectors.so -c 'search_path="samerzmd", public, vectors' -c logging_collector=on -c max_wal_size=2GB -c shared_buffers=512MB -c wal_compression=on
+    restart: always
     networks:
       - media_network
 
 networks:
   media_network:
     driver: bridge
+
+volumes:
+  model-cache:
