@@ -183,6 +183,27 @@ services:
       - ./filebrowser_database:/database
     networks:
       - media_network
+  
+  openvpn-as:
+    image: openvpn/openvpn-as
+    container_name: openvpn-as
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - MKNOD
+    devices:
+      - /dev/net/tun
+    ports:
+      - "943:943"       # Admin Web UI (HTTPS)
+      - "443:443"       # Client connection (TCP)
+      - "1194:1194/udp" # Client connection (UDP)
+    volumes:
+      - ./openvpn_as_data:/openvpn  # Persistent config data
+    environment:
+      - TZ=Asia/Riyadh
+    networks:
+      - media_network
+
 
 networks:
   media_network:
