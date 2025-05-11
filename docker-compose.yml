@@ -194,9 +194,9 @@ services:
     devices:
       - /dev/net/tun
     ports:
-      - "943:943"       # Admin Web UI (HTTPS)
-      - "443:443"       # Client connection (TCP)
-      - "1194:1194/udp" # Client connection (UDP)
+      - "943:943"         # Admin Web UI (unchanged)
+      - "9443:443"        # OpenVPN TCP over HTTPS — remapped from 443 to 9443
+      - "1194:1194/udp"   # OpenVPN UDP
     volumes:
       - ./openvpn_as_data:/openvpn  # Persistent config data
     environment:
