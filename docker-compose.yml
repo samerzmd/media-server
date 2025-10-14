@@ -180,7 +180,7 @@ services:
     volumes:
       - /mnt/storage:/srv
       - ./filebrowser_config:/config
-      - ./filebrowser_database:/database
+      - ./filebrowser_database/database.db:/database.db
     networks:
       - media_network
   
