@@ -84,6 +84,12 @@ services:
       - /mnt/storage/media:/media
       - /mnt/storage/qbittorrent:/downloads
       - ./bazarr_config:/config
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6767 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - media_network
 
@@ -99,13 +105,15 @@ services:
     environment:
       LOG_LEVEL: debug
       NAME_SERVERS: 9.9.9.9
-      PROCADDEDMEDIA: true
+      PROCADDEDMEDIA: false
       PROCMEDIAONPLAY: false
-      PLEXTOKEN: plextoken
-      PLEXSERVER: 'http://127.0.0.1:32400'
+      PLEXTOKEN: ""
+      PLEXSERVER: ""
       CONCURRENT_TRANSCRIPTIONS: 2
       USE_PATH_MAPPING: false
       MODEL_PATH: ./models
+    ports:
+      - "9000:9000"
     networks:
       - media_network
 
