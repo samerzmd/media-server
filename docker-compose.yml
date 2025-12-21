@@ -100,8 +100,8 @@ services:
     image: mccloud/subgen:cpu
     container_name: subgenai
     volumes:
-      - '${subgenai_data_folder}/models:/subgen/models'
-      - '${subgenai_data_folder}/subgen.env:/subgen/subgen.env:ro'
+      - './subgen/models:/subgen/models'
+      - './subgen/subgen.env:/subgen/subgen.env:ro'
     environment:
       LOG_LEVEL: debug
       NAME_SERVERS: 9.9.9.9
