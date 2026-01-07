@@ -154,7 +154,7 @@ services:
       - media_network
 
   readarr:
-    image: ghcr.io/linuxserver/readarr:develop
+    image: ich777/readarr:latest
     container_name: readarr
     restart: unless-stopped
     ports:
@@ -215,7 +215,7 @@ services:
       - media_network
   
   openvpn-as:
-    image: openvpn/openvpn-as
+    image: kylemanna/openvpn:latest
     container_name: openvpn-as
     restart: unless-stopped
     cap_add:
