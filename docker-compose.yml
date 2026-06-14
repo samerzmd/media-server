@@ -197,6 +197,50 @@ services:
       RADARR_URL: radarr
       RADARR_API_KEY: $RADARR_API_KEY
 
+  recommendarr:
+    build: ./recommendarr
+    image: recommendarr:local
+    container_name: recommendarr
+    restart: unless-stopped
+    depends_on:
+      - jellyfin
+      - radarr
+      - sonarr
+    ports:
+      - "8089:5000"   # review/approve dashboard
+    environment:
+      # Web dashboard (review & approve). Scheduler off = no automatic adds.
+      ENABLE_WEB: "true"
+      ENABLE_SCHEDULER: "false"
+      WEB_PORT: 5000
+      # Service URLs use the compose service names on media_network
+      JELLYFIN_URL: http://jellyfin:8096
+      JELLYFIN_API_KEY: $JELLYFIN_API_KEY
+      # Optional: comma-separated Jellyfin user IDs (empty = all users)
+      JELLYFIN_USER_IDS: $JELLYFIN_USER_IDS
+      TMDB_API_KEY: $TMDB_API_KEY
+      RADARR_URL: http://radarr:7878
+      RADARR_API_KEY: $RADARR_API_KEY
+      RADARR_ROOT_FOLDER: /media/movies
+      SONARR_URL: http://sonarr:8989
+      SONARR_API_KEY: $SONARR_API_KEY
+      SONARR_ROOT_FOLDER: /media/tv
+      # Behavior
+      MAX_MOVIE_ADDS: 5
+      MAX_TV_ADDS: 3
+      MIN_VOTE_AVERAGE: 6.0
+      MIN_VOTE_COUNT: 100
+      SEARCH_ON_ADD: "true"
+      # UI is review/approve, so the Add button is the safety gate -> DRY_RUN off.
+      # Set "true" to make Add buttons (and any scheduler) only simulate.
+      DRY_RUN: "false"
+      RUN_INTERVAL_SECONDS: 86400
+      TZ: Asia/Riyadh
+    volumes:
+      - ./recommendarr_data:/data
+    networks:
+      - media_network
+
   filebrowser:
     image: filebrowser/filebrowser:latest
     container_name: filebrowser

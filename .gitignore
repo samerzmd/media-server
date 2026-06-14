@@ -16,3 +16,4 @@ calibre-web_config/
 nginx_data/
 nginx_letsencrypt/
 readarr_config/
+recommendarr_data/
