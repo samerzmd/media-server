@@ -73,17 +73,25 @@ def _year_of(item: dict, media_type: str) -> str | None:
 
 
 class Recommender:
-    def __init__(self, jellyfin, tmdb, radarr, sonarr, state):
+    def __init__(self, jellyfin, tmdb, radarr, sonarr, state, settings=None):
         self.jellyfin = jellyfin
         self.tmdb = tmdb
         self.radarr = radarr
         self.sonarr = sonarr
         self.state = state
+        # Runtime settings (env defaults + UI overrides). Falls back to Config.
+        self.settings = settings or Config
+
+    def _user_ids(self):
+        s = self.settings
+        if hasattr(s, "user_id_list"):
+            return s.user_id_list() or None
+        return s.JELLYFIN_USER_IDS or None
 
     # ---- step 1+2+3: build the candidate pool ----
     def build_candidates(self) -> tuple[dict[int, Candidate], set[int], set[int]]:
         seeds = self.jellyfin.collect_seeds(
-            Config.JELLYFIN_USER_IDS or None, per_user_limit=Config.SEED_LIMIT
+            self._user_ids(), per_user_limit=self.settings.SEED_LIMIT
         )
 
         # TMDB ids already in the user's library — never recommend these back.
@@ -195,9 +203,9 @@ class Recommender:
                 continue
             if cand.tmdb_id in already_added:
                 continue
-            if cand.vote_average < Config.MIN_VOTE_AVERAGE:
+            if cand.vote_average < self.settings.MIN_VOTE_AVERAGE:
                 continue
-            if cand.vote_count < Config.MIN_VOTE_COUNT:
+            if cand.vote_count < self.settings.MIN_VOTE_COUNT:
                 continue
             out.append(cand)
         out.sort(key=lambda c: (c.score, c.vote_average, c.vote_count), reverse=True)
@@ -241,9 +249,9 @@ class Recommender:
                 self.radarr.add_movie(
                     tmdb_id,
                     quality_profile_id=qp,
-                    root_folder=Config.RADARR_ROOT_FOLDER,
+                    root_folder=self.settings.RADARR_ROOT_FOLDER,
                     min_availability=Config.RADARR_MIN_AVAILABILITY,
-                    search_on_add=Config.SEARCH_ON_ADD,
+                    search_on_add=self.settings.SEARCH_ON_ADD,
                 )
                 self.state.added_movies.add(tmdb_id)
                 self.state.save()
@@ -262,11 +270,11 @@ class Recommender:
                 self.sonarr.add_series(
                     tmdb_id,
                     quality_profile_id=qp,
-                    root_folder=Config.SONARR_ROOT_FOLDER,
+                    root_folder=self.settings.SONARR_ROOT_FOLDER,
                     tvdb_id=int(tvdb) if tvdb else None,
                     language_profile_id=Config.SONARR_LANGUAGE_PROFILE_ID,
                     monitor=Config.SONARR_MONITOR,
-                    search_on_add=Config.SEARCH_ON_ADD,
+                    search_on_add=self.settings.SEARCH_ON_ADD,
                 )
                 self.state.added_series.add(tmdb_id)
                 self.state.save()
@@ -293,7 +301,7 @@ class Recommender:
         log.info("Built %d candidate titles from seeds", len(candidates))
 
         # ---- Movies via Radarr ----
-        if self.radarr and Config.MAX_MOVIE_ADDS > 0:
+        if self.radarr and self.settings.MAX_MOVIE_ADDS > 0:
             try:
                 arr_ids = self.radarr.existing_tmdb_ids()
             except Exception as e:  # noqa: BLE001
@@ -303,9 +311,9 @@ class Recommender:
             ranked = self._filter(
                 candidates, "movie", lib_movies, arr_ids, self.state.added_movies
             )
-            for cand in ranked[: Config.MAX_MOVIE_ADDS]:
+            for cand in ranked[: self.settings.MAX_MOVIE_ADDS]:
                 label = f"{cand.title} ({cand.year or '?'}) [tmdb:{cand.tmdb_id}] score={cand.score:.2f}"
-                if Config.DRY_RUN:
+                if self.settings.DRY_RUN:
                     log.info("[DRY RUN] would add MOVIE: %s", label)
                     summary["movies_added"].append(label + " (dry-run)")
                     continue
@@ -316,9 +324,9 @@ class Recommender:
                     self.radarr.add_movie(
                         cand.tmdb_id,
                         quality_profile_id=qp,
-                        root_folder=Config.RADARR_ROOT_FOLDER,
+                        root_folder=self.settings.RADARR_ROOT_FOLDER,
                         min_availability=Config.RADARR_MIN_AVAILABILITY,
-                        search_on_add=Config.SEARCH_ON_ADD,
+                        search_on_add=self.settings.SEARCH_ON_ADD,
                     )
                     self.state.added_movies.add(cand.tmdb_id)
                     summary["movies_added"].append(label)
@@ -328,7 +336,7 @@ class Recommender:
                     log.warning("Radarr add failed for %s: %s", label, e)
 
         # ---- TV via Sonarr ----
-        if self.sonarr and Config.MAX_TV_ADDS > 0:
+        if self.sonarr and self.settings.MAX_TV_ADDS > 0:
             try:
                 arr_ids = self.sonarr.existing_tmdb_ids()
             except Exception as e:  # noqa: BLE001
@@ -338,9 +346,9 @@ class Recommender:
             ranked = self._filter(
                 candidates, "tv", lib_series, arr_ids, self.state.added_series
             )
-            for cand in ranked[: Config.MAX_TV_ADDS]:
+            for cand in ranked[: self.settings.MAX_TV_ADDS]:
                 label = f"{cand.title} ({cand.year or '?'}) [tmdb:{cand.tmdb_id}] score={cand.score:.2f}"
-                if Config.DRY_RUN:
+                if self.settings.DRY_RUN:
                     log.info("[DRY RUN] would add SERIES: %s", label)
                     summary["series_added"].append(label + " (dry-run)")
                     continue
@@ -353,11 +361,11 @@ class Recommender:
                     self.sonarr.add_series(
                         cand.tmdb_id,
                         quality_profile_id=qp,
-                        root_folder=Config.SONARR_ROOT_FOLDER,
+                        root_folder=self.settings.SONARR_ROOT_FOLDER,
                         tvdb_id=int(tvdb) if tvdb else None,
                         language_profile_id=Config.SONARR_LANGUAGE_PROFILE_ID,
                         monitor=Config.SONARR_MONITOR,
-                        search_on_add=Config.SEARCH_ON_ADD,
+                        search_on_add=self.settings.SEARCH_ON_ADD,
                     )
                     self.state.added_series.add(cand.tmdb_id)
                     summary["series_added"].append(label)
@@ -366,7 +374,7 @@ class Recommender:
                     summary["errors"].append(f"Sonarr add failed for {label}: {e}")
                     log.warning("Sonarr add failed for %s: %s", label, e)
 
-        if not Config.DRY_RUN:
+        if not self.settings.DRY_RUN:
             self.state.save()
         return summary
 
@@ -374,9 +382,9 @@ class Recommender:
         if Config.RADARR_QUALITY_PROFILE_ID:
             return Config.RADARR_QUALITY_PROFILE_ID
         try:
-            if Config.RADARR_QUALITY_PROFILE_NAME:
+            if self.settings.RADARR_QUALITY_PROFILE_NAME:
                 pid = self.radarr.resolve_quality_profile_id(
-                    Config.RADARR_QUALITY_PROFILE_NAME
+                    self.settings.RADARR_QUALITY_PROFILE_NAME
                 )
                 if pid:
                     return pid
@@ -389,9 +397,9 @@ class Recommender:
         if Config.SONARR_QUALITY_PROFILE_ID:
             return Config.SONARR_QUALITY_PROFILE_ID
         try:
-            if Config.SONARR_QUALITY_PROFILE_NAME:
+            if self.settings.SONARR_QUALITY_PROFILE_NAME:
                 pid = self.sonarr.resolve_quality_profile_id(
-                    Config.SONARR_QUALITY_PROFILE_NAME
+                    self.settings.SONARR_QUALITY_PROFILE_NAME
                 )
                 if pid:
                     return pid

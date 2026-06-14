@@ -7,11 +7,30 @@ requests in **Radarr** (movies) and **Sonarr** (TV) — via a *arr-themed
 ## The dashboard
 
 A servarr-styled dark UI (movies in Radarr gold, TV in Sonarr blue) at
-**http://your-host:8089**. It shows ranked recommendations as a poster grid;
-each card has TMDB rating, year, vote count, and how many of your watched titles
-it was recommended from. Click **+ Add** to send a title to Radarr/Sonarr (and
-trigger a search), or **✕** to hide it so it won't resurface. **Refresh** rebuilds
-the list from your latest watch history (results are cached ~30 min).
+**http://your-host:8089**, behind a **username/password login**. It shows ranked
+recommendations as a poster grid; each card has TMDB rating, year, vote count, and
+how many of your watched titles it was recommended from. Click **+ Add** to send a
+title to Radarr/Sonarr (and trigger a search), or **✕** to hide it so it won't
+resurface. **Refresh** rebuilds the list from your latest watch history (cached ~30 min).
+
+## Login
+
+Set `RECOMMENDARR_USER` / `RECOMMENDARR_PASSWORD` in your `.env` (defaults to
+`admin` / `changeme` — change them). Sessions are signed with `RECOMMENDARR_SECRET_KEY`
+if set, otherwise an auto-generated key persisted in `/data`.
+
+## Settings page
+
+Everything below can be edited live from **Settings** (no restart) and is saved to
+`/data/settings.json`, overriding the env defaults:
+
+- **Recommendation tuning** — max movie/TV adds, min vote average, min vote count, seed limit.
+- **Library targets** — Radarr/Sonarr root folder + quality profile name, search-on-add.
+- **Automation** — enable scheduler, run interval, dry-run, plus a **Run now** button.
+- **Connections** — Jellyfin/TMDB/Radarr/Sonarr URLs + API keys, with **Test connections**.
+
+Changing a connection rebuilds the relevant client immediately. API keys are write-only
+in the form (blank = keep the existing value).
 
 ## How it works
 

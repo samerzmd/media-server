@@ -71,6 +71,14 @@ class Config:
     ENABLE_WEB = _bool("ENABLE_WEB", True)
     WEB_HOST = os.getenv("WEB_HOST", "0.0.0.0")
     WEB_PORT = _int("WEB_PORT", 5000)
+    # Login credentials for the dashboard.
+    APP_USERNAME = os.getenv("APP_USERNAME", "admin")
+    APP_PASSWORD = os.getenv("APP_PASSWORD", "changeme")
+    # Flask session signing key. If unset, a random key is generated and persisted.
+    SECRET_KEY = os.getenv("SECRET_KEY", "")
+    SECRET_PATH = os.getenv("SECRET_PATH", "/data/secret.key")
+    # Where UI-edited settings overrides are persisted.
+    SETTINGS_PATH = os.getenv("SETTINGS_PATH", "/data/settings.json")
 
     # --- Scheduler ---
     # When False, no automatic adds happen — UI review/approve only.

@@ -29,6 +29,11 @@ class TMDBClient:
         resp.raise_for_status()
         return resp.json()
 
+    def ping(self) -> dict:
+        """Validate the API key. Raises on failure."""
+        self._get("/configuration")
+        return {"ok": True, "detail": "TMDB key valid"}
+
     def recommendations(self, media_type: str, tmdb_id: int) -> list[dict]:
         """media_type is 'movie' or 'tv'. Returns the results list."""
         try:

@@ -1,16 +1,13 @@
-"""Entry point: serves the web dashboard and optionally runs the auto-add scheduler."""
+"""Entry point: builds the app context, starts the scheduler, serves the web app."""
 import logging
+import os
+import secrets
 import sys
-import threading
 import time
 
 from .config import Config
-from .jellyfin import JellyfinClient
-from .radarr import RadarrClient
-from .recommender import Recommender
-from .sonarr import SonarrClient
-from .state import State
-from .tmdb import TMDBClient
+from .context import AppContext
+from .scheduler import Scheduler
 
 
 def setup_logging():
@@ -21,21 +18,23 @@ def setup_logging():
     )
 
 
-def build_recommender() -> Recommender:
-    jellyfin = JellyfinClient(Config.JELLYFIN_URL, Config.JELLYFIN_API_KEY)
-    tmdb = TMDBClient(Config.TMDB_API_KEY, Config.TMDB_LANGUAGE)
-    radarr = (
-        RadarrClient(Config.RADARR_URL, Config.RADARR_API_KEY)
-        if Config.RADARR_API_KEY
-        else None
-    )
-    sonarr = (
-        SonarrClient(Config.SONARR_URL, Config.SONARR_API_KEY)
-        if Config.SONARR_API_KEY
-        else None
-    )
-    state = State(Config.STATE_PATH)
-    return Recommender(jellyfin, tmdb, radarr, sonarr, state)
+def _secret_key() -> str:
+    """Stable Flask secret key: env var, else a persisted random key."""
+    if Config.SECRET_KEY:
+        return Config.SECRET_KEY
+    path = Config.SECRET_PATH
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        key = secrets.token_hex(32)
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(key)
+        return key
+    except OSError:
+        # Falls back to an ephemeral key (sessions reset on restart).
+        return secrets.token_hex(32)
 
 
 def main():
@@ -48,62 +47,33 @@ def main():
             log.error("Config error: %s", e)
         sys.exit(1)
 
+    if Config.APP_PASSWORD == "changeme":
+        log.warning("APP_PASSWORD is the default 'changeme' — set APP_PASSWORD!")
+
+    ctx = AppContext()
+    scheduler = Scheduler(ctx)
+    scheduler.start()
+
     log.info(
-        "recommendarr starting | web=%s(:%d) | scheduler=%s | dry_run=%s",
+        "recommendarr ready | web=%s(:%d) | scheduler_enabled=%s | dry_run=%s",
         Config.ENABLE_WEB,
         Config.WEB_PORT,
-        Config.ENABLE_SCHEDULER,
-        Config.DRY_RUN,
+        ctx.settings.ENABLE_SCHEDULER,
+        ctx.settings.DRY_RUN,
     )
-
-    recommender = build_recommender()
-
-    if not Config.ENABLE_WEB and not Config.ENABLE_SCHEDULER:
-        log.error("Both ENABLE_WEB and ENABLE_SCHEDULER are off; nothing to do.")
-        sys.exit(1)
-
-    # Scheduler runs in a background thread so the web server stays responsive.
-    if Config.ENABLE_SCHEDULER:
-        t = threading.Thread(target=scheduler_loop, args=(recommender, log), daemon=True)
-        t.start()
 
     if Config.ENABLE_WEB:
         from waitress import serve
 
         from .web import create_app
 
-        app = create_app(recommender)
-        log.info("Serving dashboard on http://%s:%d", Config.WEB_HOST, Config.WEB_PORT)
+        app = create_app(ctx, scheduler, _secret_key())
+        log.info("Serving on http://%s:%d", Config.WEB_HOST, Config.WEB_PORT)
         serve(app, host=Config.WEB_HOST, port=Config.WEB_PORT, threads=4)
     else:
-        # Scheduler-only mode: block the main thread.
+        log.info("Web disabled; running scheduler-only.")
         while True:
             time.sleep(3600)
-
-
-def scheduler_loop(recommender, log):
-    while True:
-        try:
-            summary = recommender.run_once()
-            log.info(
-                "Auto-run complete | movies added: %d | series added: %d | errors: %d",
-                len(summary["movies_added"]),
-                len(summary["series_added"]),
-                len(summary["errors"]),
-            )
-            for m in summary["movies_added"]:
-                log.info("  + movie: %s", m)
-            for s in summary["series_added"]:
-                log.info("  + series: %s", s)
-            for err in summary["errors"]:
-                log.warning("  ! %s", err)
-        except Exception as e:  # noqa: BLE001
-            log.exception("Auto-run failed: %s", e)
-
-        if Config.RUN_INTERVAL_SECONDS <= 0:
-            log.info("RUN_INTERVAL_SECONDS<=0; scheduler will not repeat.")
-            break
-        time.sleep(Config.RUN_INTERVAL_SECONDS)
 
 
 if __name__ == "__main__":

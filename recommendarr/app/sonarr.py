@@ -28,6 +28,11 @@ class SonarrClient:
         resp.raise_for_status()
         return resp.json()
 
+    def ping(self) -> dict:
+        """Validate connectivity + API key. Raises on failure."""
+        status = self._get("/system/status")
+        return {"ok": True, "detail": f"Sonarr {status.get('version', '?')}"}
+
     def existing_tmdb_ids(self) -> set[int]:
         """TMDB ids already present in the Sonarr library."""
         ids = set()

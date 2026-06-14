@@ -33,6 +33,11 @@ class JellyfinClient:
     def get_users(self) -> list[dict]:
         return self._get("/Users")
 
+    def ping(self) -> dict:
+        """Validate connectivity + auth. Raises on failure."""
+        info = self._get("/System/Info")
+        return {"ok": True, "detail": f"Jellyfin {info.get('Version', '?')}"}
+
     def get_watched_items(
         self, user_id: str, limit: int = 100, item_types: str = "Movie,Series"
     ) -> list[dict]:
