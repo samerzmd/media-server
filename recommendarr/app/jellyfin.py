@@ -32,13 +32,19 @@ class JellyfinClient:
     def get_users(self) -> list[dict]:
         return self._get("/Users")
 
-    def get_watched_items(self, user_id: str, limit: int = 100) -> list[dict]:
-        """Return played + favorited Movies/Series for a user, most recent first.
+    def get_watched_items(
+        self, user_id: str, limit: int = 100, item_types: str = "Movie,Series"
+    ) -> list[dict]:
+        """Return played + favorited items of the given type(s), most recent first.
 
         We combine two signals:
           - IsPlayed=true  : things they finished / watched
           - IsFavorite=true: things they explicitly liked
         Favorites are weighted more heavily by the recommender.
+
+        item_types should be a single type group (e.g. "Movie" or "Series") so the
+        per-type limit is applied independently — otherwise a movie-heavy history
+        can crowd out series entirely.
         """
         items: dict[str, dict] = {}
 
@@ -47,7 +53,7 @@ class JellyfinClient:
                 f"/Users/{user_id}/Items",
                 params={
                     "Recursive": "true",
-                    "IncludeItemTypes": "Movie,Series",
+                    "IncludeItemTypes": item_types,
                     "Fields": "ProviderIds,Genres,UserData",
                     "SortBy": "DatePlayed,SortName",
                     "SortOrder": "Descending",
@@ -69,18 +75,22 @@ class JellyfinClient:
         try:
             _collect({"IsPlayed": "true"}, weight=1)
         except requests.RequestException as e:
-            log.warning("Failed to fetch played items for user %s: %s", user_id, e)
+            log.warning("Failed to fetch played %s for user %s: %s", item_types, user_id, e)
         try:
             _collect({"IsFavorite": "true"}, weight=3)
         except requests.RequestException as e:
-            log.warning("Failed to fetch favorites for user %s: %s", user_id, e)
+            log.warning("Failed to fetch favorite %s for user %s: %s", item_types, user_id, e)
 
         return list(items.values())
 
     def collect_seeds(
         self, user_ids: Iterable[str] | None, per_user_limit: int
     ) -> list[dict]:
-        """Gather seed titles across the requested users (or all users)."""
+        """Gather seed titles across the requested users (or all users).
+
+        Movies and Series are fetched separately so each gets its own quota; a
+        history dominated by one type can't starve the other.
+        """
         if user_ids:
             target_ids = list(user_ids)
         else:
@@ -89,9 +99,13 @@ class JellyfinClient:
 
         seeds: list[dict] = []
         for uid in target_ids:
-            watched = self.get_watched_items(uid, limit=per_user_limit)
-            log.info("User %s: %d watched/favorited seed items", uid, len(watched))
-            seeds.extend(watched)
+            movies = self.get_watched_items(uid, limit=per_user_limit, item_types="Movie")
+            series = self.get_watched_items(uid, limit=per_user_limit, item_types="Series")
+            log.info(
+                "User %s: %d movie + %d series seed items", uid, len(movies), len(series)
+            )
+            seeds.extend(movies)
+            seeds.extend(series)
         return seeds
 
     @staticmethod
