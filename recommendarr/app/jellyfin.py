@@ -5,6 +5,7 @@ becomes the seed set for recommendations. We pull each title's TMDB id from
 Jellyfin's ProviderIds so we can cross-reference TMDB directly.
 """
 import logging
+from collections import Counter
 from typing import Iterable
 
 import requests
@@ -83,13 +84,102 @@ class JellyfinClient:
 
         return list(items.values())
 
+    def get_seed_series(
+        self, user_id: str, limit: int = 60, episode_scan: int = 600
+    ) -> list[dict]:
+        """Discover series the user actually engaged with.
+
+        Jellyfin only marks a *Series* played when every episode is watched, and
+        favorited only on explicit action, so relying on series-level flags misses
+        most real viewing. We therefore combine three signals:
+          - favorited series           (weight 3)
+          - fully-played series        (weight 2)
+          - series with watched episodes, rolled up by SeriesId (weight 1)
+        Returned items always carry ProviderIds for downstream TMDB resolution.
+        """
+        result: dict[str, dict] = {}
+
+        def _add(item: dict, weight: int):
+            sid = item.get("Id")
+            if not sid:
+                return
+            if sid in result:
+                result[sid]["_weight"] = max(result[sid]["_weight"], weight)
+            else:
+                item["_weight"] = weight
+                result[sid] = item
+
+        # 1) Series-level flags (favorite > fully played)
+        for params, weight in (({"IsFavorite": "true"}, 3), ({"IsPlayed": "true"}, 2)):
+            try:
+                data = self._get(
+                    f"/Users/{user_id}/Items",
+                    params={
+                        "Recursive": "true",
+                        "IncludeItemTypes": "Series",
+                        "Fields": "ProviderIds",
+                        "SortBy": "DatePlayed,SortName",
+                        "SortOrder": "Descending",
+                        "Limit": limit,
+                        "EnableTotalRecordCount": "false",
+                        **params,
+                    },
+                )
+                for it in data.get("Items", []):
+                    _add(it, weight)
+            except requests.RequestException as e:
+                log.warning("Series-flag query failed for user %s: %s", user_id, e)
+
+        # 2) Watched episodes -> parent series (the signal that usually matters)
+        try:
+            data = self._get(
+                f"/Users/{user_id}/Items",
+                params={
+                    "Recursive": "true",
+                    "IncludeItemTypes": "Episode",
+                    "IsPlayed": "true",
+                    "Fields": "SeriesId",
+                    "SortBy": "DatePlayed",
+                    "SortOrder": "Descending",
+                    "Limit": episode_scan,
+                    "EnableTotalRecordCount": "false",
+                },
+            )
+            counts: Counter = Counter()
+            for ep in data.get("Items", []):
+                sid = ep.get("SeriesId")
+                if sid:
+                    counts[sid] += 1
+            missing = [sid for sid in counts if sid not in result]
+            # Batch-fetch ProviderIds for series we only know via episodes.
+            for chunk_start in range(0, len(missing), 50):
+                chunk = missing[chunk_start : chunk_start + 50]
+                try:
+                    sdata = self._get(
+                        f"/Users/{user_id}/Items",
+                        params={
+                            "Ids": ",".join(chunk),
+                            "Fields": "ProviderIds",
+                            "EnableTotalRecordCount": "false",
+                        },
+                    )
+                    for it in sdata.get("Items", []):
+                        _add(it, 1)
+                except requests.RequestException as e:
+                    log.warning("Series detail fetch failed for user %s: %s", user_id, e)
+        except requests.RequestException as e:
+            log.warning("Watched-episode query failed for user %s: %s", user_id, e)
+
+        return list(result.values())
+
     def collect_seeds(
         self, user_ids: Iterable[str] | None, per_user_limit: int
     ) -> list[dict]:
         """Gather seed titles across the requested users (or all users).
 
-        Movies and Series are fetched separately so each gets its own quota; a
-        history dominated by one type can't starve the other.
+        Movies and series are gathered independently (so one type can't starve the
+        other), and series are discovered from watched *episodes*, not just
+        fully-played/favorited series.
         """
         if user_ids:
             target_ids = list(user_ids)
@@ -100,7 +190,7 @@ class JellyfinClient:
         seeds: list[dict] = []
         for uid in target_ids:
             movies = self.get_watched_items(uid, limit=per_user_limit, item_types="Movie")
-            series = self.get_watched_items(uid, limit=per_user_limit, item_types="Series")
+            series = self.get_seed_series(uid, limit=per_user_limit)
             log.info(
                 "User %s: %d movie + %d series seed items", uid, len(movies), len(series)
             )
