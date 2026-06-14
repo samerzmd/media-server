@@ -47,25 +47,35 @@ class SonarrClient:
         profiles = self._get("/qualityprofile")
         return profiles[0]["id"] if profiles else None
 
-    def lookup_by_tmdb(self, tmdb_id: int) -> dict | None:
-        # Sonarr's series lookup is term-based; tmdb: prefix is supported.
-        results = self._get("/series/lookup", params={"term": f"tmdb:{tmdb_id}"})
+    def _lookup(self, term: str) -> dict | None:
+        results = self._get("/series/lookup", params={"term": term})
         if isinstance(results, list) and results:
             return results[0]
         return None
+
+    def lookup(self, tmdb_id: int, tvdb_id: int | None = None) -> dict | None:
+        """Sonarr is TVDB-centric: prefer a tvdb: lookup, fall back to tmdb:."""
+        if tvdb_id:
+            series = self._lookup(f"tvdb:{tvdb_id}")
+            if series:
+                return series
+        return self._lookup(f"tmdb:{tmdb_id}")
 
     def add_series(
         self,
         tmdb_id: int,
         quality_profile_id: int,
         root_folder: str,
+        tvdb_id: int | None = None,
         language_profile_id: int = 0,
         monitor: str = "all",
         search_on_add: bool = True,
     ) -> dict:
-        series = self.lookup_by_tmdb(tmdb_id)
+        series = self.lookup(tmdb_id, tvdb_id=tvdb_id)
         if not series:
-            raise ValueError(f"Sonarr could not look up tmdbId={tmdb_id}")
+            raise ValueError(
+                f"Sonarr could not look up series (tmdbId={tmdb_id}, tvdbId={tvdb_id})"
+            )
         payload = {
             "tvdbId": series.get("tvdbId"),
             "title": series.get("title"),

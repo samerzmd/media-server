@@ -92,13 +92,37 @@ class Recommender:
 
         candidates: dict[int, Candidate] = {}
 
+        # Diagnostics: many Jellyfin series only carry a TVDB id, not a TMDB id,
+        # so we resolve those via TMDB's /find. Track how seeds break down.
+        stats = {
+            "movie_seeds": 0,
+            "tv_seeds": 0,
+            "tv_resolved": 0,
+            "seeds_no_id": 0,
+        }
+
         for seed in seeds:
-            seed_tmdb = self.jellyfin.tmdb_id(seed)
-            if seed_tmdb is None:
-                continue
             jf_type = (seed.get("Type") or "").lower()
             media_type = "movie" if jf_type == "movie" else "tv"
             weight = seed.get("_weight", 1)
+
+            seed_tmdb = self.jellyfin.tmdb_id(seed)
+            if seed_tmdb is None:
+                # Resolve via external ids (TVDB primary for series, IMDb fallback).
+                tvdb = self.jellyfin.tvdb_id(seed)
+                imdb = self.jellyfin.imdb_id(seed)
+                if tvdb is not None or imdb:
+                    seed_tmdb = self.tmdb.resolve_tmdb_id(media_type, tvdb=tvdb, imdb=imdb)
+                    if seed_tmdb is not None and media_type == "tv":
+                        stats["tv_resolved"] += 1
+            if seed_tmdb is None:
+                stats["seeds_no_id"] += 1
+                continue
+
+            if media_type == "movie":
+                stats["movie_seeds"] += 1
+            else:
+                stats["tv_seeds"] += 1
 
             if media_type == "movie":
                 library_movie_ids.add(seed_tmdb)
@@ -133,6 +157,14 @@ class Recommender:
                 cand.score += weight * position_weight
                 cand.seed_hits += 1
                 cand.contributing_seeds.add(seed_tmdb)
+
+        log.info(
+            "Seeds: %d movie, %d tv (%d tv resolved via TVDB/IMDb), %d had no usable id",
+            stats["movie_seeds"],
+            stats["tv_seeds"],
+            stats["tv_resolved"],
+            stats["seeds_no_id"],
+        )
 
         # Final score blends co-occurrence with TMDB quality signals.
         for cand in candidates.values():
@@ -225,10 +257,13 @@ class Recommender:
             if qp is None:
                 return {"ok": False, "error": "No Sonarr quality profile available"}
             try:
+                ext = self.tmdb.tv_external_ids(tmdb_id)
+                tvdb = ext.get("tvdb_id")
                 self.sonarr.add_series(
                     tmdb_id,
                     quality_profile_id=qp,
                     root_folder=Config.SONARR_ROOT_FOLDER,
+                    tvdb_id=int(tvdb) if tvdb else None,
                     language_profile_id=Config.SONARR_LANGUAGE_PROFILE_ID,
                     monitor=Config.SONARR_MONITOR,
                     search_on_add=Config.SEARCH_ON_ADD,
@@ -313,10 +348,13 @@ class Recommender:
                     summary["errors"].append("No Sonarr quality profile available")
                     break
                 try:
+                    ext = self.tmdb.tv_external_ids(cand.tmdb_id)
+                    tvdb = ext.get("tvdb_id")
                     self.sonarr.add_series(
                         cand.tmdb_id,
                         quality_profile_id=qp,
                         root_folder=Config.SONARR_ROOT_FOLDER,
+                        tvdb_id=int(tvdb) if tvdb else None,
                         language_profile_id=Config.SONARR_LANGUAGE_PROFILE_ID,
                         monitor=Config.SONARR_MONITOR,
                         search_on_add=Config.SEARCH_ON_ADD,

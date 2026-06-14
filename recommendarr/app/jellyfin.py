@@ -95,13 +95,33 @@ class JellyfinClient:
         return seeds
 
     @staticmethod
-    def tmdb_id(item: dict) -> int | None:
+    def _provider(item: dict, *keys: str) -> str | None:
         provider = item.get("ProviderIds") or {}
-        # Jellyfin capitalizes as "Tmdb"
-        raw = provider.get("Tmdb") or provider.get("TMDB") or provider.get("tmdb")
-        if raw is None:
-            return None
+        # Provider id keys are case-inconsistent across Jellyfin versions.
+        lowered = {k.lower(): v for k, v in provider.items()}
+        for k in keys:
+            val = lowered.get(k.lower())
+            if val:
+                return str(val)
+        return None
+
+    @staticmethod
+    def tmdb_id(item: dict) -> int | None:
+        raw = JellyfinClient._provider(item, "Tmdb", "TmdbId")
         try:
-            return int(raw)
+            return int(raw) if raw is not None else None
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def tvdb_id(item: dict) -> int | None:
+        raw = JellyfinClient._provider(item, "Tvdb", "TvdbId")
+        try:
+            return int(raw) if raw is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def imdb_id(item: dict) -> str | None:
+        # IMDb ids look like "tt1234567"
+        return JellyfinClient._provider(item, "Imdb", "ImdbId")
