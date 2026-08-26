@@ -178,7 +178,12 @@ services:
       SWEEP_LIMIT: ${TARJEM_SWEEP_LIMIT:-5}
       # "true" translates and reports without writing any file.
       DRY_RUN: ${TARJEM_DRY_RUN:-false}
+      # Dashboard sign-in. Set TARJEM_PASSWORD in .env - the dashboard can
+      # queue paid Claude jobs, so it should not be open on the network.
+      AUTH_PASSWORD: $TARJEM_PASSWORD
       API_TOKEN: $TARJEM_TOKEN
+      SESSION_HOURS: "${TARJEM_SESSION_HOURS:-720}"
+      COOKIE_SECURE: "${TARJEM_COOKIE_SECURE:-false}"
     volumes:
       # Identical mount points to bazarr, so the paths in its post-processing
       # webhook resolve here without any translation.
