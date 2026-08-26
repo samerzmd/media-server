@@ -155,6 +155,10 @@ services:
       # think:false, and leaving a reasoning model thinking costs roughly ten
       # times the output tokens for the same translation.
       OLLAMA_URL: "${TARJEM_OLLAMA_URL:-http://host.docker.internal:11434}"
+      # Several machines sharing the work, kind@url#model. One worker is
+      # started per backend, since routing alone would still send one batch at
+      # a time. Empty falls back to OLLAMA_URL above on its own.
+      LLM_ENDPOINTS: "${TARJEM_ENDPOINTS:-}"
       OLLAMA_MODEL: "${TARJEM_OLLAMA_MODEL:-command-r7b-arabic}"
       # Must comfortably exceed one batch plus its glossary - Ollama truncates
       # an over-long prompt silently, and cues come back missing. On a GPU there
