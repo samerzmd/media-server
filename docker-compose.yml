@@ -155,11 +155,11 @@ services:
       # think:false, and leaving a reasoning model thinking costs roughly ten
       # times the output tokens for the same translation.
       OLLAMA_URL: "${TARJEM_OLLAMA_URL:-http://host.docker.internal:11434}"
-      OLLAMA_MODEL: "${TARJEM_OLLAMA_MODEL:-qwen3:14b}"
+      OLLAMA_MODEL: "${TARJEM_OLLAMA_MODEL:-command-r7b-arabic}"
       # Must comfortably exceed one batch plus its glossary - Ollama truncates
       # an over-long prompt silently, and cues come back missing.
       OLLAMA_NUM_CTX: "${TARJEM_NUM_CTX:-8192}"
-      # A CPU-only 14B needs a long leash: a 40-cue batch runs ~15 minutes.
+      # CPU inference needs a long leash: a 40-cue batch runs ~11 minutes.
       LLM_TIMEOUT: "${TARJEM_TIMEOUT:-2400}"
       # --- Claude ---
       ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
