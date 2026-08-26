@@ -16,4 +16,7 @@ calibre-web_config/
 nginx_data/
 nginx_letsencrypt/
 readarr_config/
+# tarjem is its own repo, cloned in beside the compose file
+tarjem/
+tarjem_data/
 recommendarr_data/
