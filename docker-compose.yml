@@ -141,8 +141,27 @@ services:
     user: "1000:1000"
     ports:
       - "8081:8080"
+    # Ollama runs on the host rather than on media_network, so give the
+    # container a route back to it.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       TZ: Asia/Riyadh
+      # "openai" = the local Ollama box (free, slow). "anthropic" = Claude
+      # (costs money, ~200x faster, better Arabic). See tarjem's README.
+      LLM_PROVIDER: ${TARJEM_PROVIDER:-openai}
+      # --- local / Ollama ---
+      OPENAI_BASE_URL: "${TARJEM_LOCAL_URL:-http://host.docker.internal:11434/v1}"
+      OPENAI_MODEL: "${TARJEM_LOCAL_MODEL:-qwen3:14b}"
+      OPENAI_API_KEY: "${TARJEM_LOCAL_KEY:-ollama}"
+      # A CPU-only 14B needs a long leash: a 40-cue batch can take ~15 minutes.
+      LLM_TIMEOUT: "${TARJEM_TIMEOUT:-2400}"
+      # Ollama honours {"think": false}, which stops qwen3 burning output tokens
+      # on a scratchpad before it starts translating. Not templated: compose
+      # ends a ${VAR:-default} at the first }, which would truncate the JSON.
+      # Ignored by the anthropic provider, so it is safe to leave set.
+      LLM_EXTRA_BODY: '{"think": false}'
+      # --- Claude ---
       ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
       LLM_MODEL: ${TARJEM_MODEL:-claude-opus-5}
       # msa | msa-light | gulf | egyptian | levantine
