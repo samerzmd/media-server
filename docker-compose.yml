@@ -157,9 +157,14 @@ services:
       OLLAMA_URL: "${TARJEM_OLLAMA_URL:-http://host.docker.internal:11434}"
       OLLAMA_MODEL: "${TARJEM_OLLAMA_MODEL:-command-r7b-arabic}"
       # Must comfortably exceed one batch plus its glossary - Ollama truncates
-      # an over-long prompt silently, and cues come back missing.
-      OLLAMA_NUM_CTX: "${TARJEM_NUM_CTX:-8192}"
-      # CPU inference needs a long leash: a 40-cue batch runs ~11 minutes.
+      # an over-long prompt silently, and cues come back missing. On a GPU there
+      # is VRAM to spare for the KV cache, so this can be generous.
+      OLLAMA_NUM_CTX: "${TARJEM_NUM_CTX:-16384}"
+      # Bigger batches mean fewer prompt repetitions and more cross-cue context.
+      # Only sensible when generation is fast; on CPU it just made each batch a
+      # longer wait.
+      BATCH_SIZE: "${TARJEM_BATCH_SIZE:-60}"
+      # Generous either way: ~1 min per batch on this GPU, far longer on a CPU.
       LLM_TIMEOUT: "${TARJEM_TIMEOUT:-2400}"
       # --- Claude ---
       ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
