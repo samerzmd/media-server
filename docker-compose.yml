@@ -121,9 +121,15 @@ services:
     # AI Arabic subtitles. When bazarr can't find Arabic, tarjem translates
     # whatever it *did* find (or a track pulled out of the mkv) and writes
     # Movie.ar.srt beside the video. https://github.com/samerzmd/tarjem
-    #   git clone https://github.com/samerzmd/tarjem.git
-    #   mkdir -p tarjem_data && sudo chown 1000:1000 tarjem_data
-    build: ./tarjem
+    #
+    # tarjem is its own repo and lives *beside* this one, not inside it:
+    #     media-server/          <- you are here
+    #     tarjem/                <- git clone .../tarjem.git from the parent dir
+    #
+    # From this directory, before the first build:
+    #     (cd .. && git clone https://github.com/samerzmd/tarjem.git)
+    #     mkdir -p tarjem_data && sudo chown 1000:1000 tarjem_data
+    build: ../tarjem
     image: tarjem:local
     container_name: tarjem
     restart: unless-stopped
