@@ -227,3 +227,14 @@ is a bad evening.
 
 Not worth keeping: the media itself (re-downloadable) and `subgen/models`
 (re-downloadable, and large).
+
+---
+
+## License
+
+[MIT](LICENSE) — covers what's in this repository: the compose file, the
+configuration, and the `recommendarr` service built from source here.
+
+It does not cover the software it runs. Sonarr, Radarr, Prowlarr, Bazarr,
+Jellyfin, qBittorrent and the rest are third-party images pulled at runtime,
+each under its own licence.
