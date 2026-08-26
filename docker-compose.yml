@@ -147,20 +147,20 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       TZ: Asia/Riyadh
-      # "openai" = the local Ollama box (free, slow). "anthropic" = Claude
-      # (costs money, ~200x faster, better Arabic). See tarjem's README.
-      LLM_PROVIDER: ${TARJEM_PROVIDER:-openai}
+      # "ollama" = the local box (free, slow). "anthropic" = Claude (costs
+      # money, hours -> minutes per file). See tarjem's README.
+      LLM_PROVIDER: ${TARJEM_PROVIDER:-ollama}
       # --- local / Ollama ---
-      OPENAI_BASE_URL: "${TARJEM_LOCAL_URL:-http://host.docker.internal:11434/v1}"
-      OPENAI_MODEL: "${TARJEM_LOCAL_MODEL:-qwen3:14b}"
-      OPENAI_API_KEY: "${TARJEM_LOCAL_KEY:-ollama}"
-      # A CPU-only 14B needs a long leash: a 40-cue batch can take ~15 minutes.
+      # Ollama's native API, not its /v1 shim: only the native endpoint honours
+      # think:false, and leaving a reasoning model thinking costs roughly ten
+      # times the output tokens for the same translation.
+      OLLAMA_URL: "${TARJEM_OLLAMA_URL:-http://host.docker.internal:11434}"
+      OLLAMA_MODEL: "${TARJEM_OLLAMA_MODEL:-qwen3:14b}"
+      # Must comfortably exceed one batch plus its glossary - Ollama truncates
+      # an over-long prompt silently, and cues come back missing.
+      OLLAMA_NUM_CTX: "${TARJEM_NUM_CTX:-8192}"
+      # A CPU-only 14B needs a long leash: a 40-cue batch runs ~15 minutes.
       LLM_TIMEOUT: "${TARJEM_TIMEOUT:-2400}"
-      # Ollama honours {"think": false}, which stops qwen3 burning output tokens
-      # on a scratchpad before it starts translating. Not templated: compose
-      # ends a ${VAR:-default} at the first }, which would truncate the JSON.
-      # Ignored by the anthropic provider, so it is safe to leave set.
-      LLM_EXTRA_BODY: '{"think": false}'
       # --- Claude ---
       ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
       LLM_MODEL: ${TARJEM_MODEL:-claude-opus-5}
