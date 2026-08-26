@@ -163,7 +163,11 @@ services:
       LLM_TIMEOUT: "${TARJEM_TIMEOUT:-2400}"
       # --- Claude ---
       ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
-      LLM_MODEL: ${TARJEM_MODEL:-claude-opus-5}
+      # Measured per episode: opus-5 $0.74, sonnet-5 $0.44, haiku-4-5 $0.15.
+      LLM_MODEL: ${TARJEM_MODEL:-claude-sonnet-5}
+      # Output tokens are ~73% of the bill and thinking is billed as output,
+      # which a translation has no use for. "adaptive" to turn it back on.
+      LLM_THINKING: ${TARJEM_THINKING:-disabled}
       # msa | msa-light | gulf | egyptian | levantine
       ARABIC_REGISTER: ${TARJEM_REGISTER:-msa}
       BAZARR_URL: http://bazarr:6767
